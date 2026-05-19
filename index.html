@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Nexus AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── Reset & Variables ────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0b0f;
+      --surface:   #111318;
+      --border:    #1e2130;
+      --accent:    #4fffb0;
+      --accent2:   #00c9ff;
+      --text:      #e8eaf2;
+      --muted:     #6b7280;
+      --user-bg:   #1a2744;
+      --ai-bg:     #111318;
+      --radius:    16px;
+      --font-head: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Layout ───────────────────────────────────────────────────────── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh; /* dynamic viewport height — fixes mobile Safari */
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    /* ─── Header ───────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-head);
+      font-weight: 800;
+      font-size: 16px;
+      color: #0a0b0f;
+      flex-shrink: 0;
+    }
+
+    .header-info h1 {
+      font-family: var(--font-head);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    #status-badge {
+      font-size: 11px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--muted);
+      transition: color 0.3s;
+    }
+
+    #status-badge.online { color: var(--accent); }
+    #status-badge.error  { color: #ff6b6b; }
+
+    #status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s;
+    }
+
+    #status-badge.online #status-dot {
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    #status-badge.error #status-dot { background: #ff6b6b; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    /* ─── Messages ─────────────────────────────────────────────────────── */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Scrollbar */
+    #messages::-webkit-scrollbar { width: 4px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .message {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      animation: fadeUp 0.25s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user  { align-items: flex-end; }
+    .message.ai    { align-items: flex-start; }
+
+    .bubble {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      line-height: 1.65;
+      word-break: break-word;
+    }
+
+    .message.user .bubble {
+      background: var(--user-bg);
+      border-bottom-right-radius: 4px;
+      border: 1px solid #2a3a5c;
+    }
+
+    .message.ai .bubble {
+      background: var(--ai-bg);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .bubble p + p { margin-top: 8px; }
+
+    /* Typing indicator */
+    .typing-bubble {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      padding: 14px 18px;
+    }
+
+    .typing-bubble span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: bounce 1.2s infinite ease-in-out;
+    }
+
+    .typing-bubble span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-bubble span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30%            { transform: translateY(-6px); }
+    }
+
+    /* ─── Welcome ──────────────────────────────────────────────────────── */
+    #welcome {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex: 1;
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+
+    #welcome .big-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 4px;
+    }
+
+    #welcome h2 {
+      font-family: var(--font-head);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    #welcome p {
+      font-size: 14px;
+      max-width: 300px;
+    }
+
+    .suggestion-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 8px;
+    }
+
+    .chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 100px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      font-family: var(--font-body);
+    }
+
+    .chip:hover {
+      border-color: var(--accent);
+      background: #0d1f14;
+    }
+
+    /* ─── Input Bar ─────────────────────────────────────────────────────── */
+    #input-area {
+      padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      flex-shrink: 0;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 8px 8px 8px 14px;
+      transition: border-color 0.2s;
+    }
+
+    .input-row:focus-within { border-color: var(--accent); }
+
+    #user-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.5;
+      resize: none;
+      max-height: 120px;
+      min-height: 24px;
+      overflow-y: auto;
+    }
+
+    #user-input::placeholder { color: var(--muted); }
+
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, transform 0.1s;
+      flex-shrink: 0;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .icon-btn:hover { background: var(--border); color: var(--text); }
+    .icon-btn:active { transform: scale(0.93); }
+    .icon-btn.active { color: var(--accent); }
+
+    #send-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #0a0b0f;
+    }
+
+    #send-btn:hover { filter: brightness(1.1); }
+    #send-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      filter: none;
+    }
+
+    /* ─── Error Toast ───────────────────────────────────────────────────── */
+    #error-toast {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #2a1515;
+      border: 1px solid #ff6b6b44;
+      color: #ff9999;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 100;
+    }
+
+    #error-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ─── Responsive ────────────────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .bubble { max-width: 92%; }
+      #welcome h2 { font-size: 19px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo-mark">N</div>
+    <div class="header-info">
+      <h1>Nexus AI</h1>
+      <div id="status-badge">
+        <div id="status-dot"></div>
+        <span id="status-text">Connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Messages -->
+  <div id="messages">
+    <!-- Welcome screen (hidden once chat starts) -->
+    <div id="welcome">
+      <div class="big-icon">✦</div>
+      <h2>Hi, I'm Nexus</h2>
+      <p>Your AI assistant, ready to help with anything. What's on your mind?</p>
+      <div class="suggestion-chips">
+        <button class="chip" onclick="sendChip(this)">Explain quantum computing</button>
+        <button class="chip" onclick="sendChip(this)">Write a short poem</button>
+        <button class="chip" onclick="sendChip(this)">Give me productivity tips</button>
+        <button class="chip" onclick="sendChip(this)">Summarize a topic for me</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input Area -->
+  <div id="input-area">
+    <div class="input-row">
+      <textarea
+        id="user-input"
+        placeholder="Ask Nexus anything…"
+        rows="1"
+        autocomplete="off"
+        autocorrect="on"
+        spellcheck="true"
+      ></textarea>
+      <button class="icon-btn" id="voice-btn" title="Voice input" onclick="toggleVoice()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8"  y1="23" x2="16" y2="23"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="send-btn" title="Send" onclick="sendMessage()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Error Toast -->
+<div id="error-toast"></div>
+
+<script>
+  // ─── State ─────────────────────────────────────────────────────────────
+  const messagesEl = document.getElementById("messages");
+  const inputEl    = document.getElementById("user-input");
+  const sendBtn    = document.getElementById("send-btn");
+  const voiceBtn   = document.getElementById("voice-btn");
+  const welcome    = document.getElementById("welcome");
+  const statusBadge= document.getElementById("status-badge");
+  const statusText = document.getElementById("status-text");
+  const errorToast = document.getElementById("error-toast");
+
+  let isLoading    = false;
+  let recognition  = null;
+  let voiceActive  = false;
+
+  // ─── Status helpers ─────────────────────────────────────────────────────
+  function setStatus(state, text) {
+    statusBadge.className = state; // '', 'online', or 'error'
+    statusText.textContent = text;
+  }
+
+  // Ping the API on load to verify connection
+  async function checkOnline() {
+    setStatus("", "Connecting…");
+    try {
+      const res = await fetch("/.netlify/functions/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "ping" }),
+      });
+      if (res.ok) {
+        setStatus("online", "Online");
+      } else {
+        throw new Error("non-ok");
+      }
+    } catch {
+      setStatus("error", "Connection error");
+    }
+  }
+
+  checkOnline();
+
+  // ─── Auto-resize textarea ───────────────────────────────────────────────
+  inputEl.addEventListener("input", () => {
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+  });
+
+  // Send on Enter (Shift+Enter = newline)
+  inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // ─── Core send function ─────────────────────────────────────────────────
+  async function sendMessage(text) {
+    const message = (text ?? inputEl.value).trim();
+    if (!message || isLoading) return;
+
+    // Hide welcome screen on first message
+    welcome.style.display = "none";
+
+    // Clear input
+    inputEl.value = "";
+    inputEl.style.height = "auto";
+
+    // Render user bubble
+    appendMessage("user", message);
+
+    // Show typing indicator
+    const typingEl = appendTyping();
+
+    setLoading(true);
+
+    try {
+      // ── REAL API CALL ──
+      // Calls our secure Netlify function — API key never touches the browser
+      const response = await fetch("/.netlify/functions/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+
+      const data = await response.json();
+
+      typingEl.remove();
+
+      if (!response.ok || data.error) {
+        throw new Error(data.error || `HTTP ${response.status}`);
+      }
+
+      appendMessage("ai", data.reply);
+      setStatus("online", "Online");
+
+    } catch (err) {
+      typingEl.remove();
+      console.error("API error:", err);
+
+      // Graceful fallback — show error inline and in toast
+      appendMessage("ai", "Sorry, I ran into an issue reaching the server. Please try again in a moment.", true);
+      setStatus("error", "Connection error");
+      showToast("⚠ Could not reach AI — check your connection");
+    }
+
+    setLoading(false);
+    scrollBottom();
+  }
+
+  function sendChip(btn) {
+    sendMessage(btn.textContent);
+  }
+
+  // ─── DOM helpers ────────────────────────────────────────────────────────
+  function appendMessage(role, text, isError = false) {
+    const wrap = document.createElement("div");
+    wrap.className = `message ${role}`;
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    if (isError) bubble.style.color = "#ff9999";
+
+    // Render newlines as paragraphs
+    bubble.innerHTML = text
+      .split(/\n\n+/)
+      .map(p => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
+      .join("");
+
+    wrap.appendChild(bubble);
+    messagesEl.appendChild(wrap);
+    scrollBottom();
+    return wrap;
+  }
+
+  function appendTyping() {
+    const wrap = document.createElement("div");
+    wrap.className = "message ai";
+    const bubble = document.createElement("div");
+    bubble.className = "bubble typing-bubble";
+    bubble.innerHTML = "<span></span><span></span><span></span>";
+    wrap.appendChild(bubble);
+    messagesEl.appendChild(wrap);
+    scrollBottom();
+    return wrap;
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function scrollBottom() {
+    messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: "smooth" });
+  }
+
+  function setLoading(v) {
+    isLoading = v;
+    sendBtn.disabled = v;
+    inputEl.disabled = v;
+  }
+
+  // ─── Error Toast ─────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg) {
+    errorToast.textContent = msg;
+    errorToast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => errorToast.classList.remove("show"), 4000);
+  }
+
+  // ─── Voice Input ──────────────────────────────────────────────────────────
+  function toggleVoice() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      showToast("Voice input not supported in this browser");
+      return;
+    }
+
+    if (voiceActive) {
+      recognition?.stop();
+      return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onstart = () => {
+      voiceActive = true;
+      voiceBtn.classList.add("active");
+    };
+
+    recognition.onresult = (e) => {
+      const transcript = Array.from(e.results)
+        .map(r => r[0].transcript)
+        .join("");
+      inputEl.value = transcript;
+      inputEl.style.height = "auto";
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+    };
+
+    recognition.onend = () => {
+      voiceActive = false;
+      voiceBtn.classList.remove("active");
+      if (inputEl.value.trim()) sendMessage();
+    };
+
+    recognition.onerror = (e) => {
+      voiceActive = false;
+      voiceBtn.classList.remove("active");
+      if (e.error !== "aborted") showToast("Voice error: " + e.error);
+    };
+
+    recognition.start();
+  }
+</script>
+</body>
+</html>
