@@ -40,7 +40,9 @@ exports.handler = async (event) => {
     );
 
     const data = await response.json();
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "No response generated.";
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text 
+  || data?.error?.message 
+  || "Sorry, I could not generate a response. Please try again.";
     return { statusCode: 200, headers, body: JSON.stringify({ reply }) };
 
   } catch (err) {
