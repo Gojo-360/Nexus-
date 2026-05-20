@@ -22,29 +22,25 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers, body: JSON.stringify({ error: "Invalid request" }) };
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return { statusCode: 500, headers, body: JSON.stringify({ error: "API key not set" }) };
   }
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-opus-4-5",
-        max_tokens: 1024,
-        messages: [{ role: "user", content: userMessage }],
-        system: "You are Nexus AI, a helpful and concise assistant.",
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: userMessage }] }]
+        }),
+      }
+    );
 
     const data = await response.json();
-    const reply = data?.content?.[0]?.text ?? "No response generated.";
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "No response generated.";
     return { statusCode: 200, headers, body: JSON.stringify({ reply }) };
 
   } catch (err) {
